@@ -356,7 +356,7 @@
     ];
     guide.forEach((g, i) => {
       font(ctx, 10.5, SANS, 500); ctx.textAlign = 'left';
-      ctx.fillStyle = ink; ctx.fillText('·', BX, 133 + i * 19);
+      ctx.fillStyle = ink; ctx.fillText('•', BX, 133 + i * 19);
       ctx.fillStyle = DARK; ctx.fillText(g, BX + 9, 133 + i * 19);
     });
     ctx.fillStyle = ink; ctx.fillRect(BX, 214, BW, 1.2);
