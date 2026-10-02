@@ -128,7 +128,7 @@
   }
 
   // ---------- 본체 ----------
-  // o: { color, tone, art(재채색 전 Image), strength, logo(Image|null), academy, title, per, dose, unit, chk1, chk2, msg }
+  // o: { color, art(재채색 전 Image), strength, acadMode('logo'|'name'), logo, academy, acadFont, nameFont, titleL, titleR, per, dose, unit, chk1, chk2, msg }
   function draw(ctx, scale, o, name) {
     const NF = NAME_FONTS.find(f => f.id === o.nameFont) || NAME_FONTS[0];
     const ink = rgbToHex(inkOf(o.color));
@@ -168,7 +168,7 @@
     // 제목 박스
     ctx.fillStyle = '#fff'; ctx.strokeStyle = ink; ctx.lineWidth = 2.6;
     rr(ctx, 105.6, 99.7, 275.4, 48.9, 8); ctx.fill(); ctx.stroke();
-    drawTitle(ctx, o.title || '', 243.3, 124.6, 250, ink);
+    drawTitle(ctx, [o.titleL, o.titleR].filter(Boolean), 243.3, 124.6, 250, ink);
 
     // 이름 줄 (흰 띠 위에)
     ctx.fillStyle = '#fff';
@@ -196,7 +196,8 @@
     ctx.fillText('용 법', 242, 250.8);
 
     // 1일 ___ 1 봉
-    const dy = o.logo ? 0 : 16;
+    const useLogo = o.acadMode === 'logo';
+    const dy = useLogo ? 10 : 16;
     const lineY = 291 + dy;
     font(ctx, 13, 'Pretendard Variable', 500); ctx.fillStyle = ink;
     ctx.textAlign = 'left'; ctx.fillText(o.per || '', 134, lineY);
@@ -224,33 +225,40 @@
       }
     }
 
-    // 학원 이름
+    // 학원: 로고 또는 이름 글자
     const acad = o.academy || '';
-    const aS = fit(ctx, acad, 230, 23, T.font, 400, 10);
-    ctx.fillStyle = ink; ctx.textAlign = 'center'; font(ctx, aS, T.font, 400);
-    ctx.fillText(acad, 242, 370 + dy);
+    const AF = NAME_FONTS.find(f => f.id === o.acadFont) || NAME_FONTS[1];
+    const acadText = (x, y, maxW, size) => {
+      const sz = fit(ctx, acad, maxW, size * (AF.scale || 1), AF.id, AF.weight, 10);
+      ctx.fillStyle = ink; ctx.textAlign = 'center'; font(ctx, sz, AF.id, AF.weight);
+      ctx.fillText(acad, x, y);
+    };
+    const logoSlot = (x, y, w, h) => {
+      if (o.logo) return drawContain(ctx, o.logo, x, y, w, h);
+      // 로고를 아직 안 올렸을 때 미리보기용 자리 표시(내려받기는 로고가 있어야 가능)
+      ctx.setLineDash([4, 3]); ctx.strokeStyle = ink; ctx.lineWidth = 1.2;
+      rr(ctx, x, y, w, h, 8); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = ink; ctx.textAlign = 'center'; font(ctx, Math.min(16, h * .4), T.font, 400);
+      ctx.fillText('학원 로고', x + w / 2, y + h / 2);
+    };
+    if (useLogo) logoSlot(142, 350 + dy, 200, 40);
+    else acadText(242, 370 + dy, 230, 23);
 
     // 응원 문구
     if (o.msg) {
       font(ctx, 11, 'Pretendard Variable', 500);
       const lines = wrap(ctx, `"${o.msg}"`, 225).slice(0, 2);
-      ctx.fillStyle = ink;
-      lines.forEach((l, i) => ctx.fillText(l, 242, 396 + dy + i * 15));
+      ctx.fillStyle = ink; ctx.textAlign = 'center';
+      const my = useLogo ? 406 : 396;
+      lines.forEach((l, i) => ctx.fillText(l, 242, my + dy + i * 15));
     }
-
-    // 작은 로고 (있을 때만)
-    if (o.logo) drawContain(ctx, o.logo, 192, 424, 100, 34);
 
     // ===== 뒷면 =====
     const LB = { x: 488, y: 397, w: 183, h: 84 };
     ctx.fillStyle = '#fff'; ctx.strokeStyle = ink; ctx.lineWidth = 1.6;
     rr(ctx, LB.x - 8, LB.y - 8, LB.w + 16, LB.h + 16, 14); ctx.fill(); ctx.stroke();
-    if (o.logo) drawContain(ctx, o.logo, LB.x + 6, LB.y + 6, LB.w - 12, LB.h - 12);
-    else {
-      const s = fit(ctx, acad, LB.w - 10, 26, T.font, 400, 10);
-      ctx.fillStyle = ink; ctx.textAlign = 'center'; font(ctx, s, T.font, 400);
-      ctx.fillText(acad, LB.x + LB.w / 2, LB.y + LB.h / 2);
-    }
+    if (useLogo) logoSlot(LB.x + 6, LB.y + 6, LB.w - 12, LB.h - 12);
+    else acadText(LB.x + LB.w / 2, LB.y + LB.h / 2, LB.w - 10, 26);
 
     ctx.restore();
   }
@@ -260,8 +268,7 @@
     return /^[가-힣]{2,4}$/.test(name) ? name.split('').join(' ') : name;
   }
 
-  function drawTitle(ctx, title, cx, cy, maxW, ink) {
-    const parts = title.split('+');
+  function drawTitle(ctx, parts, cx, cy, maxW, ink) {
     let s = 27;
     const measure = () => {
       font(ctx, s, T.font, 400);
@@ -282,8 +289,8 @@
 
   // 캔버스 렌더 전에 쓰는 글꼴과 글자를 미리 받아 둔다(구글 폰트는 글자 단위로 쪼개져 있음)
   async function ensureFonts(o, names) {
-    const text = [o.title, o.academy, o.dose, o.chk1, o.chk2, o.msg, o.per, o.unit, '용 법 님', ...(names || [])].join('');
-    const fams = new Set([T.font, o.nameFont || 'Pretendard Variable', 'Pretendard Variable']);
+    const text = [o.titleL, o.titleR, o.academy, o.dose, o.chk1, o.chk2, o.msg, o.per, o.unit, '용 법 님', ...(names || [])].join('');
+    const fams = new Set([T.font, o.nameFont || 'Pretendard Variable', o.acadFont || 'Jua', 'Pretendard Variable']);
     await Promise.all([...fams].flatMap(f => [
       document.fonts.load(`400 20px "${f}"`, text),
       document.fonts.load(`700 20px "${f}"`, text),

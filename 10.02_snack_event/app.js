@@ -8,7 +8,7 @@
   const PRESETS = ['#0B9444', '#FB75BB', '#2F6BFF', '#FF7A30', '#7B5CFF', '#E8455A', '#00A7A0', '#F5B700', '#8B5E3C', '#16192A'];
 
   const state = {
-    logo: null, color: '#0B9444', nameFont: 'Pretendard Variable',
+    logo: null, color: '#0B9444', nameFont: 'Pretendard Variable', acadMode: 'logo', acadFont: 'Jua',
     mode: 'type', names: ['', '', '', '', ''], blankCount: 20,
   };
 
@@ -24,9 +24,10 @@
   function opts() {
     return {
       color: state.color, strength: .8, art, nameFont: state.nameFont,
+      acadMode: state.acadMode, acadFont: state.acadFont,
       logo: state.logo,
       academy: $('#academy').value.trim(),
-      title: $('#title').value.trim(),
+      titleL: $('#titleL').value.trim(), titleR: $('#titleR').value.trim(),
       per: $('#per').value.trim(), dose: $('#dose').value.trim(), unit: $('#unit').value.trim(),
       chk1: $('#chk1').value.trim(), chk2: $('#chk2').value.trim(),
       msg: $('#msg').value.trim(),
@@ -144,19 +145,43 @@
 
   // ---------- 이름 폰트 ----------
   function sampleName() { return state.names.map(n => n.trim()).find(Boolean) || SAMPLE; }
-  function renderFonts() {
-    const box = $('#fonts'); box.innerHTML = '';
+  function fontGrid(box, sample, current, onPick) {
+    box.innerHTML = '';
     E.NAME_FONTS.forEach(f => {
       const b = document.createElement('button');
-      b.className = 'fontbtn' + (f.id === state.nameFont ? ' on' : '');
-      b.innerHTML = `<b style="font-family:'${f.id}';font-weight:${f.weight}">${escapeHtml(sampleName())}</b><span>${f.label}</span>`;
-      b.addEventListener('click', () => { state.nameFont = f.id; renderFonts(); renderLive(); });
+      b.className = 'fontbtn' + (f.id === current ? ' on' : '');
+      b.innerHTML = `<b style="font-family:'${f.id}';font-weight:${f.weight}">${escapeHtml(sample)}</b><span>${f.label}</span>`;
+      b.addEventListener('click', () => { onPick(f.id); renderFonts(); renderLive(); });
       box.appendChild(b);
     });
   }
+  function renderFonts() {
+    fontGrid($('#fonts'), sampleName(), state.nameFont, id => state.nameFont = id);
+    fontGrid($('#acadFonts'), $('#academy').value.trim() || '우리학원', state.acadFont, id => state.acadFont = id);
+  }
+
+  // ---------- 1. 학원: 로고 / 이름 토글 ----------
+  $$('#acadTabs button').forEach(b => b.addEventListener('click', () => {
+    state.acadMode = b.dataset.a;
+    $$('#acadTabs button').forEach(x => x.classList.toggle('on', x === b));
+    $$('[data-apane]').forEach(p => p.hidden = p.dataset.apane !== state.acadMode);
+    renderLive();
+  }));
 
   // ---------- 4. 문구 ----------
-  ['academy', 'title', 'per', 'dose', 'unit', 'chk1', 'chk2', 'msg'].forEach(id => $('#' + id).addEventListener('input', renderLive));
+  const FIELDS = ['academy', 'titleL', 'titleR', 'per', 'dose', 'unit', 'chk1', 'chk2', 'msg'];
+  // 글자 수 제한 표시: "3/10자"
+  function updateLimits() {
+    $$('.lim').forEach(el => {
+      const inp = $('#' + el.dataset.for); const n = [...inp.value].length, m = inp.maxLength;
+      el.textContent = `${n}/${m}자`;
+      el.classList.toggle('full', n >= m);
+    });
+  }
+  FIELDS.forEach(id => $('#' + id).addEventListener('input', () => {
+    updateLimits(); renderLive();
+    if (id === 'academy') renderFonts();
+  }));
 
   // ---------- 5. 이름 ----------
   $$('#nameTabs button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.m)));
@@ -308,6 +333,7 @@
     if (busy) return;
     const ps = pages();
     if (!ps.length) return toast('학생 이름을 한 명 이상 넣어 주세요');
+    if (state.acadMode === 'logo' && !state.logo) return toast('학원 로고를 올리거나 "이름 글자로 쓰기"를 골라 주세요');
     busy = true;
     const bars = [$('#prog'), $('#prog2')];
     bars.forEach(b => { b.classList.add('on'); b.firstElementChild.style.width = '0%'; });
@@ -341,7 +367,7 @@
         bars.forEach(b => b.firstElementChild.style.width = Math.round((i + 1) / ps.length * 90) + '%');
         if (i % 2 === 1) await new Promise(r => setTimeout(r, 0));
       }
-      const acad = safe(o.academy || '우리학원');
+      const acad = safe((state.acadMode === 'name' && o.academy) || '우리학원');
       if (zip) {
         zip.file(`${acad}_간식약봉투_전체인쇄용_${ps.length}장.pdf`, all.output('arraybuffer'));
         zip.file('인쇄 안내.txt', [
@@ -353,7 +379,7 @@
           '4. 옆 날개와 아래 날개에 풀을 발라 붙이면 완성!',
           '',
           '완성 크기: 117 x 161mm',
-          '만든 곳: 크래빗 (instagram @crabit_official)',
+          '만든 곳: 크래빗 (instagram @hyunji.crabit)',
         ].join('\r\n'));
         const blob = await zip.generateAsync({ type: 'blob' }, m => bars.forEach(b => b.firstElementChild.style.width = (90 + m.percent / 10) + '%'));
         saveBlob(blob, `${acad}_간식약봉투.zip`);
@@ -391,6 +417,7 @@
   setColor(state.color);
   renderRows();
   renderFonts();
+  updateLimits();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderLive);
   artReady.then(renderLive);
 })();

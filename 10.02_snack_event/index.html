@@ -59,10 +59,19 @@ input[type=text]:focus,input[type=number]:focus,textarea:focus{border-color:var(
 .sw.pick{background:conic-gradient(#f66,#fc6,#6c6,#6cf,#96f,#f6c,#f66);position:relative;overflow:hidden}
 .sw.pick input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .chiplabel{font-size:12px;color:var(--ink2);margin-right:4px}
+.lim{font-size:12px;color:var(--ink3);font-weight:500;margin-left:4px}
+.lim.full{color:var(--ink2)}
+.titlerow{display:grid;grid-template-columns:1fr 30px 1fr;gap:8px;align-items:start}
+.titlerow .lim{display:block;margin:6px 0 0 2px}
+.crossmark{width:30px;height:44px;position:relative;display:block}
+.crossmark:before,.crossmark:after{content:"";position:absolute;background:var(--ink);border-radius:2px;left:50%;top:22px;transform:translate(-50%,-50%)}
+.crossmark:before{width:18px;height:6px}.crossmark:after{width:6px;height:18px}
 .fonts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:16px}
 .fontbtn{background:#fff;border:2px solid transparent;border-radius:12px;padding:10px 6px;cursor:pointer;text-align:center;box-shadow:0 1px 3px rgba(22,25,42,.06)}
 .fontbtn.on{border-color:var(--ink)}
 .fontbtn b{display:block;font-size:22px;font-weight:400;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fonts.small{grid-template-columns:repeat(2,minmax(0,1fr))}
+.fonts.small .fontbtn b{font-size:17px}
 .fontbtn span{display:block;font-size:11px;color:var(--ink2);margin-top:2px;font-family:"Pretendard Variable",sans-serif}
 .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
 .tabs button{border:0;background:#fff;border-radius:999px;padding:9px 14px;font-size:14px;cursor:pointer;font-weight:500;color:var(--ink2);box-shadow:0 1px 2px rgba(22,25,42,.06)}
@@ -135,7 +144,7 @@ footer b{color:var(--ink)}
 <body>
 <header class="top">
   <a href="https://crabit.co.kr" target="_blank" rel="noopener"><img src="crabit-logo.png" alt="크래빗"></a>
-  <a class="ig" href="https://www.instagram.com/crabit_official/" target="_blank" rel="noopener">@crabit_official</a>
+  <a class="ig" href="https://www.instagram.com/hyunji.crabit/" target="_blank" rel="noopener">@hyunji.crabit</a>
 </header>
 
 <section class="hero">
@@ -148,16 +157,27 @@ footer b{color:var(--ink)}
   <div class="steps">
     <!-- 1 -->
     <section class="step">
-      <h2><span class="n">1</span>우리 학원 정보</h2>
-      <p class="desc">로고를 올리면 봉투 뒷면에 들어가고, 로고 색으로 브랜드 컬러를 추천해 드려요.</p>
-      <label class="drop" id="logoDrop">
-        <div class="thumb" id="logoThumb">+</div>
-        <div><b id="logoTitle">학원 로고 올리기</b><span>PNG, JPG, SVG | 배경이 투명하면 더 예뻐요</span></div>
-        <input type="file" id="logoFile" accept="image/*" hidden>
-      </label>
-      <div class="row" style="margin-top:8px"><button class="btn ghost" id="logoClear" style="display:none">로고 빼기</button></div>
-      <label class="f" for="academy">학원 이름</label>
-      <input type="text" id="academy" value="크래빗영어학원" maxlength="20">
+      <h2><span class="n">1</span>우리 학원 이름</h2>
+      <p class="desc">봉투 앞면 용법 칸과 뒷면에 들어가요. 로고나 글자 중 하나를 골라 주세요.</p>
+      <div class="tabs" id="acadTabs">
+        <button data-a="logo" class="on">로고 넣기</button>
+        <button data-a="name">이름 글자로 쓰기</button>
+      </div>
+      <div data-apane="logo">
+        <label class="drop" id="logoDrop">
+          <div class="thumb" id="logoThumb">+</div>
+          <div><b id="logoTitle">학원 로고 올리기</b><span>PNG, JPG, SVG | 배경이 투명하면 더 예뻐요</span></div>
+          <input type="file" id="logoFile" accept="image/*" hidden>
+        </label>
+        <div class="row" style="margin-top:8px"><button class="btn ghost" id="logoClear" style="display:none">로고 빼기</button></div>
+        <p class="hint">로고를 올리면 로고 색으로 브랜드 컬러를 맞춰 드려요.</p>
+      </div>
+      <div data-apane="name" hidden>
+        <label class="f" for="academy">학원 이름 <span class="lim" data-for="academy"></span></label>
+        <input type="text" id="academy" value="크래빗영어학원" maxlength="10">
+        <label class="f">학원 이름 폰트</label>
+        <div class="fonts small" id="acadFonts"></div>
+      </div>
     </section>
 
     <!-- 2 -->
@@ -173,15 +193,22 @@ footer b{color:var(--ink)}
       <h2><span class="n">3</span>봉투 문구</h2>
       <p class="desc">기본 문구 그대로 써도 되고, 우리 학원 이벤트에 맞게 바꿔도 돼요.</p>
       <div class="copygrid">
-        <div class="full"><label class="f" for="title">제목 ( + 를 넣으면 약국 십자 모양으로 바뀌어요)</label><input type="text" id="title" value="시험기간+마법의약" maxlength="14"></div>
-        <div><label class="f" for="dose">용법 내용</label><input type="text" id="dose" value="달콤 간식 1" maxlength="12"></div>
-        <div class="row" style="gap:10px;flex-wrap:nowrap">
-          <div style="flex:1"><label class="f" for="per">앞 글자</label><input type="text" id="per" value="1일" maxlength="4"></div>
-          <div style="flex:1"><label class="f" for="unit">단위</label><input type="text" id="unit" value="봉" maxlength="3"></div>
+        <div class="full">
+          <label class="f">제목 (가운데에 약국 십자가 들어가요)</label>
+          <div class="titlerow">
+            <div><input type="text" id="titleL" value="시험기간" maxlength="4"><span class="lim" data-for="titleL"></span></div>
+            <i class="crossmark" aria-hidden="true"></i>
+            <div><input type="text" id="titleR" value="마법의약" maxlength="4"><span class="lim" data-for="titleR"></span></div>
+          </div>
         </div>
-        <div><label class="f" for="chk1">체크 항목 1</label><input type="text" id="chk1" value="공부 지칠 때" maxlength="10"></div>
-        <div><label class="f" for="chk2">체크 항목 2</label><input type="text" id="chk2" value="웃으면서" maxlength="10"></div>
-        <div class="full"><label class="f" for="msg">응원 한마디</label><input type="text" id="msg" value="이번 시험도 너를 믿어, 끝까지 화이팅!" maxlength="30"></div>
+        <div><label class="f" for="dose">용법 내용 <span class="lim" data-for="dose"></span></label><input type="text" id="dose" value="달콤 간식 1" maxlength="10"></div>
+        <div class="row" style="gap:10px;flex-wrap:nowrap">
+          <div style="flex:1"><label class="f" for="per">앞 글자 <span class="lim" data-for="per"></span></label><input type="text" id="per" value="1일" maxlength="4"></div>
+          <div style="flex:1"><label class="f" for="unit">단위 <span class="lim" data-for="unit"></span></label><input type="text" id="unit" value="봉" maxlength="3"></div>
+        </div>
+        <div><label class="f" for="chk1">체크 항목 1 <span class="lim" data-for="chk1"></span></label><input type="text" id="chk1" value="공부 지칠 때" maxlength="7"></div>
+        <div><label class="f" for="chk2">체크 항목 2 <span class="lim" data-for="chk2"></span></label><input type="text" id="chk2" value="웃으면서" maxlength="7"></div>
+        <div class="full"><label class="f" for="msg">응원 한마디 <span class="lim" data-for="msg"></span></label><input type="text" id="msg" value="이번 시험도 너를 믿어, 끝까지 화이팅!" maxlength="30"></div>
       </div>
     </section>
 
@@ -264,7 +291,7 @@ footer b{color:var(--ink)}
 
 <footer>
   <b>크래빗</b>이 원장님 칼퇴를 위해 만들었어요. 학생 장학카드와 보상 관리는 크래빗에서.<br>
-  다음 이벤트 자료가 궁금하면 <a href="https://www.instagram.com/crabit_official/" target="_blank" rel="noopener">@crabit_official</a> 팔로우!
+  다음 이벤트 자료가 궁금하면 <a href="https://www.instagram.com/hyunji.crabit/" target="_blank" rel="noopener">@hyunji.crabit</a> 팔로우!
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
