@@ -254,11 +254,16 @@
     }
 
     // ===== 뒷면 =====
-    const LB = { x: 488, y: 397, w: 183, h: 84 };
-    ctx.fillStyle = '#fff'; ctx.strokeStyle = ink; ctx.lineWidth = 1.6;
-    rr(ctx, LB.x - 8, LB.y - 8, LB.w + 16, LB.h + 16, 14); ctx.fill(); ctx.stroke();
-    if (useLogo) logoSlot(LB.x + 6, LB.y + 6, LB.w - 12, LB.h - 12);
-    else acadText(LB.x + LB.w / 2, LB.y + LB.h / 2, LB.w - 10, 26);
+    if (useLogo) {
+      // 로고: 일러스트와 겹쳐도 잘 보이게 흰 도형(테두리 없음) 위에 올린다
+      const LB = { x: 488, y: 397, w: 183, h: 84 };
+      ctx.fillStyle = '#fff';
+      rr(ctx, LB.x - 10, LB.y - 10, LB.w + 20, LB.h + 20, 16); ctx.fill();
+      logoSlot(LB.x + 6, LB.y + 6, LB.w - 12, LB.h - 12);
+    } else {
+      // 학원 이름 글자: 도형 없이 일러스트가 비어 있는 뒷면 가운데에
+      acadText(BACK.x + BACK.w / 2, BACK.y + BACK.h / 2, 190, 28);
+    }
 
     ctx.restore();
   }

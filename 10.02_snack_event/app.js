@@ -217,6 +217,12 @@
       });
       tb.appendChild(tr);
     });
+    // 표 맨 아래 줄: 누르면 한 줄 추가
+    const add = document.createElement('tr');
+    add.className = 'addrow';
+    add.innerHTML = '<td class="no"><span class="plus">+</span></td><td colspan="2">한 줄 추가</td>';
+    add.addEventListener('click', addRow);
+    tb.appendChild(add);
     updateCount();
     if (focusIdx != null) { const ins = tb.querySelectorAll('input'); ins[focusIdx] && ins[focusIdx].focus(); }
   }
@@ -229,7 +235,10 @@
     const n = state.names.filter(s => s.trim()).length;
     $('#nameCount').innerHTML = `입력한 학생 <b>${n}</b>명`;
   }
-  $('#addRow').addEventListener('click', () => { state.names.push(''); renderRows(state.names.length - 1); });
+  function addRow() {
+    state.names.push(''); renderRows(state.names.length - 1);
+    const box = $('.names'); box.scrollTop = box.scrollHeight;
+  }
   $('#blankCount').addEventListener('input', renderLive);
 
   $('#dlTemplate').addEventListener('click', () => {
