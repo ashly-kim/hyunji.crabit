@@ -57,12 +57,6 @@ input[type=text]:focus,input[type=number]:focus,textarea:focus{background:#fff;b
 .drop .thumb img{max-width:100%;max-height:100%;object-fit:contain}
 .drop b{display:block;font-size:17px;font-weight:600}
 .drop span{font-size:14px;color:var(--ink2)}
-.swatches{display:flex;flex-wrap:wrap;gap:8px}
-.sw{width:38px;height:38px;border-radius:50%;cursor:pointer;border:0;padding:0;position:relative;transition:transform .15s}
-.sw.on{transform:scale(1.12)}
-.sw.on::after{content:"";position:absolute;left:50%;top:46%;width:8px;height:14px;border:solid #fff;border-width:0 3px 3px 0;transform:translate(-50%,-50%) rotate(45deg)}
-.sw.pick{background:conic-gradient(#f66,#fc6,#6c6,#6cf,#96f,#f6c,#f66);position:relative;overflow:hidden}
-.sw.pick input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .chiplabel{font-size:14px;color:var(--ink2);margin-right:4px}
 .lim{font-size:13px;color:var(--ink3);font-weight:500;margin-left:4px}
 .lim.full{color:var(--ink2)}
@@ -71,6 +65,13 @@ input[type=text]:focus,input[type=number]:focus,textarea:focus{background:#fff;b
 .crossmark{width:30px;height:44px;position:relative;display:block}
 .crossmark:before,.crossmark:after{content:"";position:absolute;background:var(--ink);border-radius:2px;left:50%;top:22px;transform:translate(-50%,-50%)}
 .crossmark:before{width:18px;height:6px}.crossmark:after{width:6px;height:18px}
+.designs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.design{background:#fff;border:0;border-radius:12px;padding:8px 8px 10px;cursor:pointer;text-align:center;color:var(--ink)}
+.design canvas{width:100%;aspect-ratio:232/320;display:block;border-radius:6px}
+.design b{display:block;font-size:15px;font-weight:600;margin-top:8px}
+.design span{display:block;font-size:12.5px;color:var(--ink2)}
+.design.on{background:var(--ink);color:#fff}
+.design.on span{color:rgba(255,255,255,.7)}
 .fonts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:16px}
 .fontbtn{background:#fff;border:0;border-radius:12px;padding:12px 6px;cursor:pointer;text-align:center;color:var(--ink)}
 .fontbtn.on{background:var(--ink);color:#fff}
@@ -137,6 +138,7 @@ footer b{color:var(--ink)}
   .wrap{grid-template-columns:1fr}
   .side{position:static;order:-1}
   .fonts{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .designs{grid-template-columns:repeat(3,minmax(0,1fr))}
   .pv{grid-template-columns:1fr}
   .pv .list{max-height:200px}
 }
@@ -160,7 +162,7 @@ footer b{color:var(--ink)}
 <section class="hero">
   <span class="eyebrow">원장님 칼퇴지킴이 | 이벤트 자료 메이커</span>
   <h1>시험기간 간식 약봉투,<br>로고와 이름만 넣으면 끝나요</h1>
-  <p>시험기간 간식 이벤트, 학생 이름 하나하나 쓰고 봉투 꾸미다 보면 퇴근이 늦어지잖아요. 그 시간을 줄여 드리고 싶어서 만들었어요. 우리 학원 로고와 학생 이름만 넣으시면 학원 컬러에 맞춘 인쇄용 PDF가 한 번에 나옵니다. 비용은 들지 않아요.</p>
+  <p>시험기간 간식 이벤트, 학생 이름 하나하나 쓰고 봉투 꾸미다 보면 퇴근이 늦어지잖아요. 그 시간을 줄여 드리고 싶어서 만들었어요. 우리 학원 로고와 학생 이름만 넣고 디자인을 고르시면 인쇄용 PDF가 한 번에 나옵니다. 비용은 들지 않아요.</p>
   <p class="pc"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16192A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>컴퓨터로 접속하시길 추천드려요. 엑셀로 이름 올리기와 PDF 인쇄가 훨씬 편합니다.</p>
 </section>
 
@@ -181,7 +183,7 @@ footer b{color:var(--ink)}
           <input type="file" id="logoFile" accept="image/*" hidden>
         </label>
         <div class="row" style="margin-top:8px"><button class="btn ghost" id="logoClear" style="display:none">로고 빼기</button></div>
-        <p class="hint">로고를 올리면 로고 색으로 브랜드 컬러를 맞춰 드려요.</p>
+        
       </div>
       <div data-apane="name" hidden>
         <label class="f" for="academy">학원 이름 <span class="lim" data-for="academy"></span></label>
@@ -193,10 +195,9 @@ footer b{color:var(--ink)}
 
     <!-- 2 -->
     <section class="step">
-      <h2><span class="n">2</span>브랜드 컬러</h2>
-      <p class="desc">선, 제목, 그림이 모두 이 색으로 바뀌어요.</p>
-      <div id="fromLogo" class="row" style="margin-bottom:10px;display:none"><span class="chiplabel">로고에서 찾은 색</span><div class="swatches" id="logoSwatches"></div></div>
-      <div class="swatches" id="swatches"></div>
+      <h2><span class="n">2</span>봉투 디자인</h2>
+      <p class="desc">귀여운 봉투부터 진짜 약국 약봉투까지, 마음에 드는 걸 골라 주세요.</p>
+      <div class="designs" id="designs"></div>
     </section>
 
     <!-- 4 -->

@@ -5,25 +5,24 @@
   const DPI = 200;
   const SAMPLE = '김크래';
 
-  const PRESETS = ['#0B9444', '#FB75BB', '#2F6BFF', '#FF7A30', '#7B5CFF', '#E8455A', '#00A7A0', '#F5B700', '#8B5E3C', '#16192A'];
 
   const state = {
-    logo: null, color: '#0B9444', nameFont: 'Pretendard Variable', acadMode: 'logo', acadFont: 'Jua',
+    logo: null, design: 'pink', nameFont: 'Pretendard Variable', acadMode: 'logo', acadFont: 'Jua',
     mode: 'type', names: ['', '', '', '', ''], blankCount: 20,
   };
 
   // ---------- 일러스트(1종) 미리 받기 ----------
-  let art = null;
-  const artReady = new Promise(res => {
+  const arts = {};
+  const artReady = Promise.all(Object.entries(E.THEMES).filter(([, t]) => t.art).map(([k, t]) => new Promise(res => {
     const img = new Image();
-    img.onload = () => { art = img; res(); };
+    img.onload = () => { arts[k] = img; res(); };
     img.onerror = res;
-    img.src = 'art/default.png';
-  });
+    img.src = t.art;
+  })));
 
   function opts() {
     return {
-      color: state.color, strength: .8, art, nameFont: state.nameFont,
+      design: state.design, art: arts[state.design], nameFont: state.nameFont,
       acadMode: state.acadMode, acadFont: state.acadFont,
       logo: state.logo,
       academy: $('#academy').value.trim(),
@@ -41,7 +40,9 @@
 
   // ---------- 실시간 미리보기 ----------
   let liveTimer = null;
+  let thumbTimer = null;
   function renderLive() {
+    clearTimeout(thumbTimer); thumbTimer = setTimeout(renderDesigns, 400);
     clearTimeout(liveTimer);
     liveTimer = setTimeout(async () => {
       await artReady;
@@ -51,7 +52,7 @@
       const cv = $('#live');
       const s = cv.width / E.PAGE.w;
       cv.height = Math.round(E.PAGE.h * s);
-      E.draw(cv.getContext('2d'), s, o, name);
+      E.draw(cv.getContext('2d'), s, o, name, 0);
       $('#liveLabel').textContent = state.mode === 'blank' ? '이름 칸 비움 | A4 가로' : (ps[0] ? `${ps[0]} 학생 | 총 ${ps.length}장` : '예시 이름으로 보여드려요');
     }, 60);
   }
@@ -64,7 +65,7 @@
   $('#logoClear').addEventListener('click', () => {
     state.logo = null;
     $('#logoThumb').innerHTML = '+'; $('#logoTitle').textContent = '학원 로고 올리기';
-    $('#logoClear').style.display = 'none'; $('#fromLogo').style.display = 'none';
+    $('#logoClear').style.display = 'none';
     renderLive();
   });
 
@@ -78,14 +79,6 @@
         $('#logoThumb').innerHTML = ''; $('#logoThumb').appendChild(img.cloneNode());
         $('#logoTitle').textContent = file.name.length > 24 ? file.name.slice(0, 22) + '...' : file.name;
         $('#logoClear').style.display = '';
-        const cols = logoColors(img);
-        if (cols.length) {
-          $('#fromLogo').style.display = '';
-          $('#logoSwatches').innerHTML = '';
-          cols.forEach(c => $('#logoSwatches').appendChild(swatch(c)));
-          setColor(cols[0]);
-          toast('로고에서 브랜드 컬러를 찾아 적용했어요');
-        }
         renderLive();
       };
       img.src = r.result;
@@ -93,55 +86,32 @@
     r.readAsDataURL(file);
   }
 
-  // 로고에서 채도 있는 대표색 최대 3개 뽑기(흰색, 검정, 회색은 제외)
-  function logoColors(img) {
-    const c = document.createElement('canvas'); const S = 80;
-    c.width = S; c.height = S;
-    const x = c.getContext('2d');
-    const iw = img.naturalWidth, ih = img.naturalHeight, k = Math.min(S / iw, S / ih);
-    x.drawImage(img, 0, 0, iw * k, ih * k);
-    let d; try { d = x.getImageData(0, 0, S, S).data; } catch (e) { return []; }
-    const bins = new Map();
-    for (let i = 0; i < d.length; i += 4) {
-      if (d[i + 3] < 200) continue;
-      const r = d[i], g = d[i + 1], b = d[i + 2];
-      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
-      if (mx > 240 && mn > 225) continue;
-      if (mx < 30) continue;
-      if (mx - mn < 28) continue;
-      const key = (r >> 4) + ',' + (g >> 4) + ',' + (b >> 4);
-      const v = bins.get(key) || { n: 0, r: 0, g: 0, b: 0 };
-      v.n++; v.r += r; v.g += g; v.b += b; bins.set(key, v);
+  // ---------- 2. 디자인 ----------
+  async function renderDesigns() {
+    await artReady;
+    const box = $('#designs');
+    if (!box.children.length) {
+      Object.entries(E.THEMES).forEach(([k, t]) => {
+        const b = document.createElement('button');
+        b.className = 'design'; b.dataset.d = k;
+        b.innerHTML = `<canvas width="232" height="320"></canvas><b>${t.label}</b><span>${t.sub}</span>`;
+        b.addEventListener('click', () => { state.design = k; renderDesigns(); renderLive(); });
+        box.appendChild(b);
+      });
     }
-    const sorted = [...bins.values()].sort((a, b) => b.n - a.n);
-    const out = [];
-    for (const v of sorted) {
-      const c = [v.r / v.n, v.g / v.n, v.b / v.n];
-      if (out.some(o => { const p = E.hexToRgb(o); return Math.abs(p[0] - c[0]) + Math.abs(p[1] - c[1]) + Math.abs(p[2] - c[2]) < 90; })) continue;
-      out.push(E.rgbToHex(c));
-      if (out.length === 3) break;
+    // 썸네일: 봉투 전체를 그린 뒤 앞면만 잘라서 보여 준다
+    const tmp = document.createElement('canvas'); const sc = 1.6;
+    tmp.width = Math.round(E.PAGE.w * sc); tmp.height = Math.round(E.PAGE.h * sc);
+    for (const b of box.children) {
+      const k = b.dataset.d;
+      b.classList.toggle('on', k === state.design);
+      const o = { ...opts(), design: k, art: arts[k] };
+      await E.ensureFonts(o, [sampleName()]);
+      E.draw(tmp.getContext('2d'), sc, o, state.mode === 'blank' ? '' : sampleName(), 0);
+      const cv = b.querySelector('canvas'), F = E.FRONT;
+      cv.getContext('2d').drawImage(tmp, F.x * sc, F.y * sc, F.w * sc, F.h * sc, 0, 0, cv.width, cv.height);
     }
-    return out;
   }
-
-  // ---------- 2. 컬러 ----------
-  function swatch(c) {
-    const b = document.createElement('button');
-    b.className = 'sw'; b.style.background = c; b.dataset.c = c.toLowerCase(); b.title = c;
-    b.addEventListener('click', () => setColor(c));
-    return b;
-  }
-  function setColor(c) {
-    state.color = c.toLowerCase();
-    $$('.sw').forEach(s => s.classList.toggle('on', s.dataset.c === state.color));
-    renderLive();
-  }
-  PRESETS.forEach(c => $('#swatches').appendChild(swatch(c)));
-  const pick = document.createElement('label');
-  pick.className = 'sw pick'; pick.title = '직접 고르기';
-  pick.innerHTML = '<input type="color" value="#0b9444">';
-  pick.querySelector('input').addEventListener('input', e => setColor(e.target.value));
-  $('#swatches').appendChild(pick);
 
   // ---------- 이름 폰트 ----------
   function sampleName() { return state.names.map(n => n.trim()).find(Boolean) || SAMPLE; }
@@ -293,7 +263,7 @@
     const o = opts();
     await E.ensureFonts(o, ps);
     const cv = $('#pvCanvas'); const s = cv.width / E.PAGE.w;
-    E.draw(cv.getContext('2d'), s, o, ps[pvIdx]);
+    E.draw(cv.getContext('2d'), s, o, ps[pvIdx], pvIdx);
     $('#pvPos').textContent = `${pvIdx + 1} / ${ps.length}`;
     $('#pvCount').textContent = `| 총 ${ps.length}장`;
     const blank = state.mode === 'blank';
@@ -362,7 +332,7 @@
       const folder = zip ? zip.folder('학생별') : null;
       const used = {};
       for (let i = 0; i < ps.length; i++) {
-        E.draw(ctx, s, o, ps[i]);
+        E.draw(ctx, s, o, ps[i], i);
         const jpg = cv.toDataURL('image/jpeg', .92);
         if (i) all.addPage([W, H], 'landscape');
         all.addImage(jpg, 'JPEG', 0, 0, W, H, undefined, 'FAST');
@@ -423,7 +393,6 @@
   function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 2400); }
 
   // ---------- 시작 ----------
-  setColor(state.color);
   renderRows();
   renderFonts();
   updateLimits();
