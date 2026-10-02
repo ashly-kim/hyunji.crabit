@@ -8,25 +8,22 @@
   const PRESETS = ['#0B9444', '#FB75BB', '#2F6BFF', '#FF7A30', '#7B5CFF', '#E8455A', '#00A7A0', '#F5B700', '#8B5E3C', '#16192A'];
 
   const state = {
-    logo: null, color: '#0B9444', tone: 'cute', variant: 0, strength: .8,
-    mode: 'type', names: ['', '', '', '', ''], blankCount: 20, aiArt: null,
+    logo: null, color: '#0B9444', nameFont: 'Pretendard Variable',
+    mode: 'type', names: ['', '', '', '', ''], blankCount: 20,
   };
 
-  // ---------- 일러스트 미리 받기 ----------
-  const arts = {};
-  const artReady = Promise.all(Object.keys(E.TONES).flatMap(t => [1, 2].map(i => new Promise(res => {
+  // ---------- 일러스트(1종) 미리 받기 ----------
+  let art = null;
+  const artReady = new Promise(res => {
     const img = new Image();
-    img.onload = () => { (arts[t] = arts[t] || [])[i - 1] = img; res(); };
+    img.onload = () => { art = img; res(); };
     img.onerror = res;
-    img.src = `art/${t}${i}.png`;
-  }))));
+    img.src = 'art/default.png';
+  });
 
   function opts() {
-    const ai = state.aiArt && state.aiArt.tone === state.tone ? state.aiArt : null;
     return {
-      color: state.color, tone: state.tone, strength: state.strength,
-      art: ai ? ai.canvas : (arts[state.tone] || [])[state.variant],
-      artRaw: !!ai,
+      color: state.color, strength: .8, art, nameFont: state.nameFont,
       logo: state.logo,
       academy: $('#academy').value.trim(),
       title: $('#title').value.trim(),
@@ -55,20 +52,7 @@
       cv.height = Math.round(E.PAGE.h * s);
       E.draw(cv.getContext('2d'), s, o, name);
       $('#liveLabel').textContent = state.mode === 'blank' ? '이름 칸 비움 | A4 가로' : (ps[0] ? `${ps[0]} 학생 | 총 ${ps.length}장` : '예시 이름으로 보여드려요');
-      renderTones();
     }, 60);
-  }
-
-  function renderTones() {
-    for (const t of Object.keys(E.TONES)) {
-      const cv = document.querySelector(`.tone[data-t="${t}"] canvas`);
-      const img = (arts[t] || [])[state.variant] || (arts[t] || [])[0];
-      if (!cv || !img) continue;
-      const art = E.recolor(img, state.color, state.strength);
-      const x = cv.getContext('2d');
-      x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height);
-      x.drawImage(art, 0, 0, cv.width, cv.height);
-    }
   }
 
   // ---------- 1. 로고 ----------
@@ -158,41 +142,16 @@
   pick.querySelector('input').addEventListener('input', e => setColor(e.target.value));
   $('#swatches').appendChild(pick);
 
-  // ---------- 3. 톤 ----------
-  for (const [t, v] of Object.entries(E.TONES)) {
-    const d = document.createElement('div');
-    d.className = 'tone' + (t === state.tone ? ' on' : ''); d.dataset.t = t;
-    d.innerHTML = `<canvas width="150" height="210"></canvas><span>${v.label}</span><small>${v.sub}</small>`;
-    d.addEventListener('click', () => { state.tone = t; $$('.tone').forEach(x => x.classList.toggle('on', x === d)); renderLive(); });
-    $('#tones').appendChild(d);
-  }
-  $$('#variantSeg button').forEach(b => b.addEventListener('click', () => {
-    state.variant = +b.dataset.v; state.aiArt = null;
-    $$('#variantSeg button').forEach(x => x.classList.toggle('on', x === b));
-    renderLive();
-  }));
-  $('#artStrength').addEventListener('input', e => {
-    state.strength = e.target.value / 100; $('#artStrengthV').textContent = e.target.value + '%'; renderLive();
-  });
-
-  // 실시간 AI(선택): config.js 에 프록시 주소가 있을 때만 켠다
-  if (window.CONFIG && CONFIG.aiEndpoint) {
-    $('#aiBox').style.display = 'block';
-    $('#aiBtn').addEventListener('click', async () => {
-      const btn = $('#aiBtn'); btn.disabled = true; $('#aiHint').textContent = 'AI가 그리는 중이에요. 20초 정도 걸려요.';
-      try {
-        const r = await fetch(CONFIG.aiEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tone: state.tone, color: state.color }) });
-        const j = await r.json();
-        if (!r.ok) throw new Error(j.error || '실패');
-        const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = j.dataUrl; });
-        const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
-        c.getContext('2d').drawImage(img, 0, 0);
-        state.aiArt = { tone: state.tone, canvas: c };
-        $('#aiHint').textContent = '새 그림을 입혔어요. 그림 A, B를 누르면 기본 그림으로 돌아가요.';
-        renderLive();
-      } catch (e) {
-        $('#aiHint').textContent = '지금은 AI 그림을 만들 수 없어요. 기본 그림으로 진행해 주세요. (' + e.message + ')';
-      } finally { btn.disabled = false; }
+  // ---------- 이름 폰트 ----------
+  function sampleName() { return state.names.map(n => n.trim()).find(Boolean) || SAMPLE; }
+  function renderFonts() {
+    const box = $('#fonts'); box.innerHTML = '';
+    E.NAME_FONTS.forEach(f => {
+      const b = document.createElement('button');
+      b.className = 'fontbtn' + (f.id === state.nameFont ? ' on' : '');
+      b.innerHTML = `<b style="font-family:'${f.id}';font-weight:${f.weight}">${escapeHtml(sampleName())}</b><span>${f.label}</span>`;
+      b.addEventListener('click', () => { state.nameFont = f.id; renderFonts(); renderLive(); });
+      box.appendChild(b);
     });
   }
 
@@ -214,7 +173,7 @@
       const tr = document.createElement('tr');
       tr.innerHTML = `<td class="no">${i + 1}</td><td><input type="text" maxlength="12" placeholder="이름 입력"></td><td class="del"><button title="삭제">×</button></td>`;
       const inp = tr.querySelector('input'); inp.value = n;
-      inp.addEventListener('input', () => { state.names[i] = inp.value; updateCount(); renderLive(); });
+      inp.addEventListener('input', () => { state.names[i] = inp.value; updateCount(); renderLive(); if (i === filledFirst()) renderFonts(); });
       inp.addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); if (i === state.names.length - 1) state.names.push(''); renderRows(i + 1); }
       });
@@ -224,7 +183,7 @@
         if (list.length > 1) {
           e.preventDefault();
           state.names.splice(i, 1, ...list);
-          compact(); renderRows(); renderLive(); toast(`${list.length}명을 넣었어요`);
+          compact(); renderRows(); renderFonts(); renderLive(); toast(`${list.length}명을 넣었어요`);
         }
       });
       tr.querySelector('button').addEventListener('click', () => {
@@ -236,6 +195,7 @@
     updateCount();
     if (focusIdx != null) { const ins = tb.querySelectorAll('input'); ins[focusIdx] && ins[focusIdx].focus(); }
   }
+  function filledFirst() { return state.names.findIndex(n => n.trim()); }
   function compact() {
     const filled = state.names.map(s => s.trim()).filter(Boolean);
     state.names = filled.concat(['']);
@@ -272,7 +232,7 @@
       const list = aoa.slice(hr + 1).map(r => String(r[col] || '').trim()).filter(s => s && !s.startsWith('(예시)'));
       if (!list.length) { $('#excelResult').textContent = '이름을 찾지 못했어요. 양식의 "학생 이름" 칸을 채워서 올려 주세요.'; return; }
       state.names = list.concat(['']);
-      renderRows();
+      renderRows(); renderFonts();
       $('#excelResult').innerHTML = `<b>${list.length}명</b>을 불러왔어요. 직접 입력 표에서 고칠 수 있어요.`;
       setMode('type');
       toast(`엑셀에서 ${list.length}명을 불러왔어요`);
@@ -430,6 +390,7 @@
   // ---------- 시작 ----------
   setColor(state.color);
   renderRows();
+  renderFonts();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderLive);
   artReady.then(renderLive);
 })();

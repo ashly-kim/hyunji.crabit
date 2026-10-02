@@ -8,13 +8,17 @@
   const BACK = { x: 416, y: 52.4, w: 328, h: 456.6 };
   const DARK = '#16192A';
 
-  const TONES = {
-    cute:  { label: '귀여운', sub: '말랑 스티커', font: 'Jua', nameFont: 'Jua' },
-    clean: { label: '깔끔한', sub: '미니멀 라인', font: 'Pretendard Variable', fontWeight: 700, nameFont: 'Pretendard Variable' },
-    retro: { label: '레트로', sub: '옛날 약국', font: 'Do Hyeon', nameFont: 'Do Hyeon' },
-    hand:  { label: '손그림', sub: '크레파스', font: 'Gaegu', fontWeight: 700, nameFont: 'Gaegu' },
-    pop:   { label: '팝', sub: '쨍한 키치', font: 'Jua', nameFont: 'Jua' },
-  };
+  // 디자인은 하나로 고정(제목, 학원 이름은 Jua). 학생 이름만 폰트를 고른다.
+  const T = { font: 'Jua' };
+  const NAME_FONTS = [
+    { id: 'Pretendard Variable', label: '깔끔체', weight: 600 },
+    { id: 'Jua', label: '주아체', weight: 400 },
+    { id: 'Gowun Dodum', label: '고운돋움', weight: 400 },
+    { id: 'Do Hyeon', label: '도현체', weight: 400 },
+    { id: 'Gaegu', label: '개구체', weight: 700 },
+    { id: 'Nanum Pen Script', label: '나눔손글씨 펜', weight: 400, scale: 1.5, tight: true },
+    { id: 'Hi Melody', label: '하이멜로디', weight: 400, scale: 1.2, tight: true },
+  ];
 
   // ---------- 색 ----------
   function hexToRgb(h) {
@@ -126,7 +130,7 @@
   // ---------- 본체 ----------
   // o: { color, tone, art(재채색 전 Image), strength, logo(Image|null), academy, title, per, dose, unit, chk1, chk2, msg }
   function draw(ctx, scale, o, name) {
-    const T = TONES[o.tone] || TONES.cute;
+    const NF = NAME_FONTS.find(f => f.id === o.nameFont) || NAME_FONTS[0];
     const ink = rgbToHex(inkOf(o.color));
     ctx.save();
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
@@ -134,8 +138,7 @@
 
     // 일러스트: 앞면 그대로, 뒷면은 좌우 반전
     if (o.art) {
-      // AI로 새로 그린 그림은 이미 브랜드 컬러라 재채색하지 않는다
-      const art = o.artRaw ? o.art : recolor(o.art, o.color, o.strength);
+      const art = recolor(o.art, o.color, o.strength);
       drawImageCover(ctx, art, FRONT.x, FRONT.y, FRONT.w, FRONT.h, false);
       drawImageCover(ctx, art, BACK.x, BACK.y, BACK.w, BACK.h, true);
     }
@@ -165,19 +168,20 @@
     // 제목 박스
     ctx.fillStyle = '#fff'; ctx.strokeStyle = ink; ctx.lineWidth = 2.6;
     rr(ctx, 105.6, 99.7, 275.4, 48.9, 8); ctx.fill(); ctx.stroke();
-    drawTitle(ctx, o.title || '', 243.3, 124.6, 250, T, ink);
+    drawTitle(ctx, o.title || '', 243.3, 124.6, 250, ink);
 
     // 이름 줄 (흰 띠 위에)
     ctx.fillStyle = '#fff';
     rr(ctx, 102, 166, 282, 60, 12); ctx.fill();
     ctx.textBaseline = 'middle';
     if (name) {
-      const s = fit(ctx, spaced(name), 200, 26, T.nameFont, T.fontWeight === 700 ? 600 : 400, 12);
+      const shown = NF.tight ? name : spaced(name);
+      const s = fit(ctx, shown, 200, 26 * (NF.scale || 1), NF.id, NF.weight, 12);
       ctx.fillStyle = DARK; ctx.textAlign = 'center';
-      font(ctx, s, T.nameFont, T.fontWeight === 700 ? 600 : 400);
-      ctx.fillText(spaced(name), 236, 196);
+      font(ctx, s, NF.id, NF.weight);
+      ctx.fillText(shown, 236, 196);
     }
-    font(ctx, 21, T.nameFont, T.fontWeight === 700 ? 500 : 400);
+    font(ctx, 21, T.font, 400);
     ctx.fillStyle = ink; ctx.textAlign = 'right';
     ctx.fillText('님', 374, 196);
     ctx.fillStyle = ink;
@@ -188,7 +192,7 @@
     rr(ctx, 106.5, 247.2, 271, 224.7, 18); ctx.fill(); ctx.stroke();
     ctx.fillStyle = ink;
     rr(ctx, 206.7, 232.6, 70.7, 35, 17.5); ctx.fill();
-    font(ctx, 17, T.font, T.fontWeight); ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+    font(ctx, 17, T.font, 400); ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
     ctx.fillText('용 법', 242, 250.8);
 
     // 1일 ___ 1 봉
@@ -222,8 +226,8 @@
 
     // 학원 이름
     const acad = o.academy || '';
-    const aS = fit(ctx, acad, 230, 23, T.font, T.fontWeight, 10);
-    ctx.fillStyle = ink; ctx.textAlign = 'center'; font(ctx, aS, T.font, T.fontWeight);
+    const aS = fit(ctx, acad, 230, 23, T.font, 400, 10);
+    ctx.fillStyle = ink; ctx.textAlign = 'center'; font(ctx, aS, T.font, 400);
     ctx.fillText(acad, 242, 370 + dy);
 
     // 응원 문구
@@ -243,8 +247,8 @@
     rr(ctx, LB.x - 8, LB.y - 8, LB.w + 16, LB.h + 16, 14); ctx.fill(); ctx.stroke();
     if (o.logo) drawContain(ctx, o.logo, LB.x + 6, LB.y + 6, LB.w - 12, LB.h - 12);
     else {
-      const s = fit(ctx, acad, LB.w - 10, 26, T.font, T.fontWeight, 10);
-      ctx.fillStyle = ink; ctx.textAlign = 'center'; font(ctx, s, T.font, T.fontWeight);
+      const s = fit(ctx, acad, LB.w - 10, 26, T.font, 400, 10);
+      ctx.fillStyle = ink; ctx.textAlign = 'center'; font(ctx, s, T.font, 400);
       ctx.fillText(acad, LB.x + LB.w / 2, LB.y + LB.h / 2);
     }
 
@@ -256,11 +260,11 @@
     return /^[가-힣]{2,4}$/.test(name) ? name.split('').join(' ') : name;
   }
 
-  function drawTitle(ctx, title, cx, cy, maxW, T, ink) {
+  function drawTitle(ctx, title, cx, cy, maxW, ink) {
     const parts = title.split('+');
     let s = 27;
     const measure = () => {
-      font(ctx, s, T.font, T.fontWeight);
+      font(ctx, s, T.font, 400);
       const tw = parts.reduce((a, p) => a + ctx.measureText(p).width, 0);
       return tw + (parts.length - 1) * (s * .95);
     };
@@ -269,7 +273,7 @@
     let x = cx - w / 2;
     ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillStyle = ink;
     parts.forEach((p, i) => {
-      font(ctx, s, T.font, T.fontWeight);
+      font(ctx, s, T.font, 400);
       ctx.fillText(p, x, cy + 1);
       x += ctx.measureText(p).width;
       if (i < parts.length - 1) { cross(ctx, x + s * .475, cy, s * .78, ink); x += s * .95; }
@@ -278,9 +282,8 @@
 
   // 캔버스 렌더 전에 쓰는 글꼴과 글자를 미리 받아 둔다(구글 폰트는 글자 단위로 쪼개져 있음)
   async function ensureFonts(o, names) {
-    const T = TONES[o.tone] || TONES.cute;
     const text = [o.title, o.academy, o.dose, o.chk1, o.chk2, o.msg, o.per, o.unit, '용 법 님', ...(names || [])].join('');
-    const fams = new Set([T.font, T.nameFont, 'Pretendard Variable']);
+    const fams = new Set([T.font, o.nameFont || 'Pretendard Variable', 'Pretendard Variable']);
     await Promise.all([...fams].flatMap(f => [
       document.fonts.load(`400 20px "${f}"`, text),
       document.fonts.load(`700 20px "${f}"`, text),
@@ -288,5 +291,5 @@
     ])).catch(() => {});
   }
 
-  window.Envelope = { PAGE, TONES, draw, ensureFonts, recolor, hexToRgb, rgbToHex, lum };
+  window.Envelope = { PAGE, NAME_FONTS, draw, ensureFonts, recolor, hexToRgb, rgbToHex, lum };
 })();
