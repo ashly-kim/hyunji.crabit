@@ -1,6 +1,6 @@
 // 약봉투 렌더러: 원본 도안(A4 가로, pt 단위) 좌표 그대로 캔버스에 그린다.
 // 미리보기와 인쇄용 PDF가 같은 함수를 쓰므로 화면과 출력물이 어긋나지 않는다.
-// 디자인은 THEMES 5종. 귀여운 3종(cute 레이아웃)은 힉스필드 그림을 깔고, 약국 2종(pharmacy 레이아웃)은 실제 약봉투 양식을 따른다.
+// 디자인은 THEMES 5종. 그림 3종(cute 레이아웃)은 힉스필드 GPT Image 2.5로 만든 앞뒷면 한 장짜리 그림을 깔고, 약국 2종(pharmacy 레이아웃)은 실제 약봉투 양식을 따른다.
 (function () {
   const PAGE = { w: 842.25, h: 595.5 };
   const BODY = { x: 84, y: 52.4, w: 660, h: 456.6 };
@@ -11,9 +11,9 @@
   const SANS = 'Pretendard Variable';
 
   const THEMES = {
-    pink:  { label: '말랑 간식', sub: '귀여운 핑크', layout: 'cute', art: 'art/pink.jpg', paper: '#FFF1F6', main: '#E8559A', font: 'Jua' },
-    mint:  { label: '토끼 약사', sub: '귀여운 민트', layout: 'cute', art: 'art/mint.jpg', paper: '#EAF8F3', main: '#17906E', font: 'Jua' },
-    retro: { label: '레트로 약국', sub: '옛날 약방', layout: 'cute', art: 'art/retro.jpg', paper: '#FBF5E6', main: '#C93C25', sub2: '#1F3A6B', font: 'Do Hyeon' },
+    pink:  { label: '핑크 약국', sub: '귀여운 캡슐', layout: 'cute', art: 'art/pink.jpg', paper: '#FAF9F7', main: '#E2659C', font: 'Jua' },
+    mint:  { label: '민트 토끼', sub: '깔끔한 테두리', layout: 'cute', art: 'art/mint.jpg', paper: '#FFFFFF', main: '#2A9C7A', font: 'Jua' },
+    kraft: { label: '크라프트', sub: '종이 약봉투', layout: 'cute', art: 'art/kraft.jpg', paper: '#C1A07D', main: '#9A2A22', font: 'Do Hyeon' },
     green: { label: '동네 약국', sub: '진짜 약봉투', layout: 'pharmacy', band: 'fill', paper: '#FFFFFF', main: '#14935B', font: SANS },
     blue:  { label: '병원 내복약', sub: '진짜 약봉투', layout: 'pharmacy', band: 'line', paper: '#FFFFFF', main: '#1F5FBF', font: SANS },
   };
@@ -171,10 +171,8 @@
   function drawCute(ctx, T, o, name, art) {
     const ink = T.main;
     const A = academyHelpers(ctx, o, ink);
-    if (art) {
-      drawImageCover(ctx, art, FRONT.x, FRONT.y, FRONT.w, FRONT.h, false);
-      drawImageCover(ctx, art, BACK.x, BACK.y, BACK.w, BACK.h, true);
-    }
+    // 그림은 앞뒷면을 한 장으로 그린 것이라 본체 크기에 그대로 맞춘다(가운데 접는 선이 맞도록)
+    if (art) ctx.drawImage(art, BODY.x, BODY.y, BODY.w, BODY.h);
 
     // 제목
     ctx.fillStyle = '#fff'; ctx.strokeStyle = ink; ctx.lineWidth = 2.6;
@@ -191,33 +189,33 @@
 
     // 용법 박스
     ctx.fillStyle = '#fff'; ctx.strokeStyle = ink; ctx.lineWidth = 2.6;
-    rr(ctx, 106.5, 247.2, 271, 224.7, 18); ctx.fill(); ctx.stroke();
+    rr(ctx, 106.5, 247.2, 271, 196, 18); ctx.fill(); ctx.stroke();
     ctx.fillStyle = ink;
     rr(ctx, 206.7, 232.6, 70.7, 35, 17.5); ctx.fill();
     font(ctx, 17, T.font, 400); ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
     ctx.fillText('용 법', 242, 250.8);
 
     const useLogo = o.acadMode === 'logo';
-    const dy = useLogo ? 10 : 16;
-    const lineY = 291 + dy;
+    const dy = useLogo ? 0 : 6;
+    const lineY = 287 + dy;
     font(ctx, 13, SANS, 500); ctx.fillStyle = ink;
     ctx.textAlign = 'left'; ctx.fillText(o.per || '', 134, lineY);
     ctx.textAlign = 'right'; ctx.fillText(o.unit || '', 350, lineY);
     const doseS = fit(ctx, o.dose || '', 160, 15, SANS, 500, 9);
     ctx.fillStyle = DARK; ctx.textAlign = 'center'; font(ctx, doseS, SANS, 500);
     ctx.fillText(o.dose || '', 242, lineY);
-    ctx.fillStyle = ink; ctx.fillRect(132.5, 304.9 + dy, 219.1, 1.2);
-    checks(ctx, [o.chk1, o.chk2], 242, 328 + dy, 225, T.sub2 || ink);
+    ctx.fillStyle = ink; ctx.fillRect(132.5, 300.9 + dy, 219.1, 1.2);
+    checks(ctx, [o.chk1, o.chk2], 242, 322 + dy, 225, T.sub2 || ink);
 
-    if (useLogo) A.logo(142, 350 + dy, 200, 40);
-    else A.text(242, 370 + dy, 230, 23);
+    if (useLogo) A.logo(152, 340, 180, 36);
+    else A.text(242, 360 + dy, 230, 23);
 
     if (o.msg) {
       font(ctx, 11, SANS, 500);
       const lines = wrap(ctx, `"${o.msg}"`, 225).slice(0, 2);
       ctx.fillStyle = T.sub2 || ink; ctx.textAlign = 'center';
-      const my = useLogo ? 406 : 396;
-      lines.forEach((l, i) => ctx.fillText(l, 242, my + dy + i * 15));
+      const my = useLogo ? 398 : 388 + dy;
+      lines.forEach((l, i) => ctx.fillText(l, 242, my + i * 14));
     }
 
     // 뒷면: 로고는 흰 도형 위, 학원 이름은 도형 없이 그림이 비어 있는 가운데
