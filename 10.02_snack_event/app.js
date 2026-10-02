@@ -3,7 +3,7 @@
   const $ = s => document.querySelector(s);
   const $$ = s => [...document.querySelectorAll(s)];
   const DPI = 200;
-  const SAMPLE = '김크래';
+  const SAMPLE = '김래빗';
 
 
   const state = {
@@ -322,7 +322,7 @@
       const o = opts();
       await E.ensureFonts(o, ps);
       const { jsPDF } = window.jspdf;
-      const W = E.PAGE.w, H = E.PAGE.h;
+      const W = 841.89, H = 595.28; // 정확한 A4 가로. 도안 좌표와 0.04% 차이라 크기 변화 없음
       const s = DPI / 72;
       const cv = document.createElement('canvas');
       cv.width = Math.round(W * s); cv.height = Math.round(H * s);
@@ -352,10 +352,12 @@
         zip.file('인쇄 안내.txt', [
           '시험기간 간식 약봉투 인쇄 안내',
           '',
-          '1. A4 용지, 가로 방향으로 인쇄해 주세요.',
-          '2. 인쇄 배율은 반드시 "실제 크기" 또는 "100%"로 골라 주세요. ("용지에 맞춤"을 고르면 봉투 크기가 줄어요)',
-          '3. 실선을 따라 자르고, 점선을 따라 접어 주세요.',
-          '4. 옆 날개와 아래 날개에 풀을 발라 붙이면 완성!',
+          '1. A4 용지, 가로 방향으로 인쇄해 주세요. 120~150g 두꺼운 종이를 쓰면 더 튼튼해요(일반 80g 복사용지도 가능).',
+          '2. 인쇄 배율은 반드시 "실제 크기" 또는 "100%"로 골라 주세요. ("용지에 맞춤"을 고르면 봉투가 작아져요)',
+          '3. 바깥 실선을 따라 잘라 주세요. 선 밖으로 색이 2mm 더 칠해져 있어서 조금 삐뚤게 잘라도 흰 테가 안 생겨요.',
+          '4. 옆 날개와 아래 날개를 점선에서 안쪽(그림이 없는 뒷면 쪽)으로 접어 주세요.',
+          '5. 가운데 점선을 그림이 바깥으로 오게 반으로 접고, 두 날개에 풀을 발라 앞면 안쪽에 붙여 주세요.',
+          '6. 위쪽이 열린 입구예요. 간식을 넣고 스테이플러나 스티커로 닫으면 완성!',
           '',
           '완성 크기: 117 x 161mm',
           '만든 곳: 크래빗 (instagram @hyunji.crabit)',

@@ -172,7 +172,14 @@
     const ink = T.main;
     const A = academyHelpers(ctx, o, ink);
     // 그림은 앞뒷면을 한 장으로 그린 것이라 본체 크기에 그대로 맞춘다(가운데 접는 선이 맞도록)
-    if (art) ctx.drawImage(art, BODY.x, BODY.y, BODY.w, BODY.h);
+    if (art) {
+      ctx.drawImage(art, BODY.x, BODY.y, BODY.w, BODY.h);
+      // 그림 가장자리 색을 자르는 선 바깥 6pt까지 늘려 재단 여유를 만든다(위, 왼쪽, 오른쪽, 아래)
+      const iw = art.naturalWidth || art.width, ih = art.naturalHeight || art.height, B = 6;
+      ctx.drawImage(art, 0, 0, iw, 2, BODY.x, BODY.y - B, BODY.w, B);
+      ctx.drawImage(art, 0, ih - 2, iw, 2, BODY.x, BODY.y + BODY.h, BODY.w, B);
+      ctx.drawImage(art, 0, 0, 2, ih, BODY.x - B, BODY.y - B, B, BODY.h + 2 * B);
+    }
 
     // 제목
     ctx.fillStyle = '#fff'; ctx.strokeStyle = ink; ctx.lineWidth = 2.6;
@@ -280,10 +287,10 @@
     // 상단 띠
     const parts = [o.titleL, o.titleR].filter(Boolean);
     if (T.band === 'fill') {
-      ctx.fillStyle = ink; ctx.fillRect(FRONT.x, FRONT.y, FRONT.w, 64);
+      ctx.fillStyle = ink; ctx.fillRect(FRONT.x - 6, FRONT.y - 6, FRONT.w + 6, 70);
       drawTitle(ctx, parts, 250, 84, 280, '#fff', SANS, 700, 26);
     } else {
-      ctx.fillStyle = ink; ctx.fillRect(FRONT.x, FRONT.y, FRONT.w, 8);
+      ctx.fillStyle = ink; ctx.fillRect(FRONT.x - 6, FRONT.y - 6, FRONT.w + 6, 14);
       drawTitle(ctx, parts, 250, 88, 280, ink, SANS, 700, 26);
       ctx.fillStyle = ink; ctx.fillRect(X, 111, W, 2); ctx.fillRect(X, 115, W, .8);
     }
@@ -342,7 +349,7 @@
 
     // ===== 뒷면: 복약 안내 =====
     const BX = BACK.x + 34, BW = BACK.w - 68, BC = BACK.x + BACK.w / 2;
-    ctx.fillStyle = ink; ctx.fillRect(BACK.x, BACK.y, BACK.w, 8);
+    ctx.fillStyle = ink; ctx.fillRect(BACK.x, BACK.y - 6, BACK.w, 14);
     font(ctx, 15, SANS, 700); ctx.fillStyle = ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('복약 안내', BC, 96);
     ctx.fillRect(BX, 112, BW, 1.2);
@@ -385,7 +392,10 @@
     ctx.save();
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, PAGE.w, PAGE.h);
-    ctx.fillStyle = T.paper; outline(ctx); ctx.fill();
+    // 재단 여유 2mm(6pt): 가위로 자를 때 선에서 조금 벗어나도 흰 테가 안 보이게 바깥까지 칠한다
+    const BLEED = 6;
+    ctx.fillStyle = T.paper; ctx.strokeStyle = T.paper; ctx.lineWidth = BLEED * 2; ctx.lineJoin = 'round';
+    outline(ctx); ctx.fill(); ctx.stroke();
 
     if (T.layout === 'pharmacy') drawPharmacy(ctx, T, o, name, idx);
     else drawCute(ctx, T, o, name, o.art);
